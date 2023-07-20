@@ -8,9 +8,7 @@ from pydantic import BaseModel
 import jwt
 
 # Конфігурація Cloudinary
-# CLOUDINARY_CLOUD_NAME = "dxyczpopy"
-# CLOUDINARY_API_KEY = "313758292541176"
-# CLOUDINARY_API_SECRET = "NAwYS4XcsDa8IJwhf396PGSRYYQ"
+
 
 app = FastAPI()
 
