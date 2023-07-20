@@ -7,11 +7,10 @@ from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel
 import jwt
 
-
 # Конфігурація Cloudinary
-#CLOUDINARY_CLOUD_NAME = "dxyczpopy"
-#CLOUDINARY_API_KEY = "313758292541176"
-#CLOUDINARY_API_SECRET = "NAwYS4XcsDa8IJwhf396PGSRYYQ"
+# CLOUDINARY_CLOUD_NAME = "dxyczpopy"
+# CLOUDINARY_API_KEY = "313758292541176"
+# CLOUDINARY_API_SECRET = "NAwYS4XcsDa8IJwhf396PGSRYYQ"
 
 app = FastAPI()
 
@@ -26,6 +25,9 @@ class User(BaseModel):
     username: str
     password: str
     role: str
+    is_active: bool = True  # Додали поле для позначення активності користувача
+    registered_at: datetime = datetime.utcnow()  # Додали поле для дати реєстрації користувача
+    uploaded_photos: int = 0  # Додали поле для підрахунку завантажених фото
 
 
 # Генерація JWT токена
@@ -88,6 +90,7 @@ class Comment(BaseModel):
     text: str
     created_at: datetime
     edited_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None  # Додали поле для часу редагування коментаря
 
 
 # Знову, симулюємо базу даних списком
@@ -126,13 +129,44 @@ def delete_comment(comment_id: int, user: User = Depends(role_dependency(require
     return
 
 
+# Маршрут для додавання коментарів під світлинами
+@app.post("/images/{image_id}/comments/", response_model=Comment)
+def add_comment_to_image(image_id: int, text: str, current_user: User = Depends(get_current_user)):
+    image = next((img for img in database if img.id == image_id), None)
+    if image is None:
+        raise HTTPException(status_code=404, detail="Image not found")
+
+    comment = Comment(id=len(comments_db) + 1, image_id=image_id, text=text, created_at=datetime.utcnow())
+    image.comments.append(comment)
+    return comment
+
+
+# Маршрут для редагування свого коментаря
+@app.put("/images/{image_id}/comments/{comment_id}", response_model=Comment)
+def update_comment(image_id: int, comment_id: int, text: str, current_user: User = Depends(get_current_user)):
+    image = next((img for img in database if img.id == image_id), None)
+    if image is None:
+        raise HTTPException(status_code=404, detail="Image not found")
+
+    comment = next((cmt for cmt in image.comments if cmt.id == comment_id), None)
+    if comment is None:
+        raise HTTPException(status_code=404, detail="Comment not found")
+
+    if comment.user.username != current_user.username:
+        raise HTTPException(status_code=403, detail="You can only edit your own comments")
+
+    comment.text = text
+    comment.updated_at = datetime.utcnow()  # Оновлюємо час редагування коментаря
+    return comment
+
+
 # Модель для зображення
 class Image(BaseModel):
     id: int
     url: str
     description: str
     tags: List[str]
-
+    comments: List[Comment] = []  # Додали поле для зберігання коментарів під зображенням
 
 # База даних імітуємо простим списком
 database = []
@@ -212,6 +246,54 @@ def get_image_qr_code(image_id: int):
     # Ваш код для створення QR-коду на основі Cloudinary URL тут
     qr_code_url = "https://your-qr-code-url.com/qr_code.png"
     return qr_code_url
+
+
+# Маршрут для перегляду профілю користувача (без редагування)
+@app.get("/users/{username}", response_model=User)
+def get_user_profile(username: str, current_user: User = Depends(get_current_user)):
+    if current_user.username != username:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You don't have enough permissions")
+
+    user = get_user(username=username)
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return user
+
+
+# Маршрут для редагування інформації про користувача (дозволено тільки для себе)
+@app.put("/users/{username}/edit", response_model=User)
+def edit_user_profile(username: str, password: str, current_user: User = Depends(get_current_user)):
+    if current_user.username != username:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You don't have enough permissions")
+
+    user = get_user(username=username)
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user.password = password  # Оновлення паролю користувача
+    return user
+
+
+# Маршрут для перегляду списку всіх користувачів (дозволено тільки адміністраторам)
+@app.get("/users/", response_model=List[User])
+def get_all_users(current_user: User = Depends(role_dependency(required_role="admin"))):
+    users = [
+        user for user in users
+        if user.role != "admin"  # Показуємо всіх користувачів, окрім адміністраторів
+    ]
+    return users
+
+
+# Маршрут для зміни статусу користувача на неактивний (бан)
+@app.put("/users/{username}/ban", response_model=User)
+def ban_user(username: str, current_user: User = Depends(role_dependency(required_role="admin"))):
+    user = get_user(username=username)
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user.is_active = False
+    return user
 
 
 app.include_router(router)
