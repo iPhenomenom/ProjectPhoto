@@ -1,0 +1,7 @@
+fastapi~=0.100.0
+jose~=1.0.0
+pydantic~=2.0.3
+router~=0.1
+uvicorn~=0.23.1
+PyJWT~=2.8.0
+starlette==0.30.0
