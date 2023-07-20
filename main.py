@@ -25,9 +25,9 @@ class User(BaseModel):
     username: str
     password: str
     role: str
-    is_active: bool = True  # Додали поле для позначення активності користувача
-    registered_at: datetime = datetime.utcnow()  # Додали поле для дати реєстрації користувача
-    uploaded_photos: int = 0  # Додали поле для підрахунку завантажених фото
+    is_active: bool = True  # Поле для позначення активності користувача
+    registered_at: datetime = datetime.utcnow()  # Поле для дати реєстрації користувача
+    uploaded_photos: int = 0  # Поле для підрахунку завантажених фото
 
 
 # Генерація JWT токена
@@ -39,7 +39,7 @@ def create_access_token(data: dict, expires_delta: timedelta):
     return encoded_jwt
 
 
-# Функція для отримання користувача з бази даних (потрібно реалізувати власним чином)
+# Функція для отримання користувача з бази даних
 def get_user(username: str):
     # Замініть цей код на звернення до бази даних або іншим методом отримання користувачів
     users = [
@@ -93,7 +93,7 @@ class Comment(BaseModel):
     updated_at: Optional[datetime] = None  # Додали поле для часу редагування коментаря
 
 
-# Знову, симулюємо базу даних списком
+# Cимулюємо базу даних списком
 comments_db = []
 
 
@@ -166,7 +166,8 @@ class Image(BaseModel):
     url: str
     description: str
     tags: List[str]
-    comments: List[Comment] = []  # Додали поле для зберігання коментарів під зображенням
+    comments: List[Comment] = []  # Поле для зберігання коментарів під зображенням
+
 
 # База даних імітуємо простим списком
 database = []
@@ -174,7 +175,7 @@ database = []
 
 # Симуляція завантаження зображення на Cloudinary
 def upload_image_to_cloudinary(image_data: bytes):
-    # Ваш код для завантаження на Cloudinary тут
+    # Код для завантаження на Cloudinary тут
     cloudinary_url = "https://your-cloudinary-image-url.com/image.jpg"
     return cloudinary_url
 
@@ -232,7 +233,7 @@ def get_image_view_url(image_id: int):
     image = next((img for img in database if img.id == image_id), None)
     if image is None:
         raise HTTPException(status_code=404, detail="Image not found")
-    # Ваш код для створення URL трансформованого зображення на Cloudinary тут
+    # Код для створення URL трансформованого зображення на Cloudinary тут
     cloudinary_view_url = "https://your-cloudinary-transformed-image-url.com/image.jpg"
     return cloudinary_view_url
 
