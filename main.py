@@ -6,6 +6,8 @@ from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel
 import jwt
+import secrets
+
 
 # Конфігурація Cloudinary
 
@@ -13,7 +15,7 @@ import jwt
 app = FastAPI()
 
 # Налаштування JWT токенів
-SECRET_KEY = "your_secret_key"  # Замініть це на ваш секретний ключ
+SECRET_KEY = secrets.token_hex(32)  # "your_secret_key"  Замініть це на ваш секретний ключ
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
